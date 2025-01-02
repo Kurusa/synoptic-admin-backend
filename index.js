@@ -19,18 +19,32 @@ app.get('/', (req, res) => {
     res.send('Server is running');
 });
 
-app.get('/users', (req, res) => {
-    db.query('SELECT id, is_blocked, user_name, first_name, chat_id, status, language, created_at FROM users', (err, results) => {
+app.get('/stats/users', (req, res) => {
+    const query = `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, 
+            COUNT(*) as user_count
+        FROM users
+        GROUP BY DATE (created_at)
+        ORDER BY DATE (created_at) ASC
+    `;
+
+    db.query(query, (err, results) => {
         if (err) {
-            return res.status(500).json({error: err});
+            console.error(err);
+            return res.status(500).json({ error: 'Database error' });
         }
-        res.json(results);
+
+        const labels = results.map(row => row.date);
+        const values = results.map(row => row.user_count);
+        const total = values.reduce((acc, count) => acc + count, 0);
+
+        res.json({ labels, values, total });
     });
 });
 
-app.get('/messages/stats', (req, res) => {
+app.get('/stats/messages', (req, res) => {
     const query = `
-        SELECT DATE (created_at) as date, COUNT (*) as message_count
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as message_count
         FROM messages
         GROUP BY DATE (created_at)
         ORDER BY DATE (created_at) ASC
@@ -39,13 +53,14 @@ app.get('/messages/stats', (req, res) => {
     db.query(query, (err, results) => {
         if (err) {
             console.error(err);
-            return res.status(500).json({error: 'Database error'});
+            return res.status(500).json({ error: 'Database error' });
         }
 
         const labels = results.map(row => row.date);
-        const data = results.map(row => row.message_count);
+        const values = results.map(row => row.message_count);
+        const total = values.reduce((acc, count) => acc + count, 0);
 
-        res.json({labels, data});
+        res.json({ labels, values, total });
     });
 });
 
