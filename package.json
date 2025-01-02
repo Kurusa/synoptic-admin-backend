@@ -1,0 +1,23 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "pm2 start index.js --name 'backend-admin-panel-service'",
+    "stop": "pm2 stop backend-admin-panel-service",
+    "restart": "pm2 restart backend-admin-panel-service",
+    "delete": "pm2 delete backend-admin-panel-service",
+    "logs": "pm2 logs backend-admin-panel-service",
+    "status": "pm2 status"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mysql2": "^3.12.0"
+  }
+}
