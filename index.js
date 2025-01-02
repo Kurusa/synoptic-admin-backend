@@ -22,8 +22,9 @@ app.get('/', (req, res) => {
 app.get('/stats/users', (req, res) => {
     const query = `
         SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, 
-            COUNT(*) as user_count
+               COUNT(*) as user_count
         FROM users
+        WHERE created_at > '2020-09-18'
         GROUP BY DATE (created_at)
         ORDER BY DATE (created_at) ASC
     `;
@@ -31,14 +32,52 @@ app.get('/stats/users', (req, res) => {
     db.query(query, (err, results) => {
         if (err) {
             console.error(err);
-            return res.status(500).json({ error: 'Database error' });
+            return res.status(500).json({error: 'Database error'});
         }
 
-        const labels = results.map(row => row.date);
-        const values = results.map(row => row.user_count);
+        function squashSequence(rows, index, count) {
+            if (index >= rows.length || rows[index].user_count !== 1) {
+                return {count, index};
+            }
+
+            return squashSequence(rows, index + 1, count + 1);
+        }
+
+        const formattedResults = [];
+        let i = 0;
+
+        while (i < results.length) {
+            const startDate = results[i].date;
+            let endDate = startDate;
+            let count = results[i].user_count;
+
+            if (results[i].user_count === 1) {
+                const result = squashSequence(results, i + 1, count);
+                count = result.count;
+                i = result.index - 1;
+                endDate = results[i].date;
+            }
+
+            const startYear = startDate.slice(0, 4);
+            const endYear = endDate.slice(0, 4);
+
+            const range = startDate === endDate
+                ? startDate
+                : `${startDate} - ${
+                    startYear === endYear
+                        ? endDate.slice(5)
+                        : endDate
+                }`;
+
+            formattedResults.push({range, count});
+            i++;
+        }
+
+        const labels = formattedResults.map(row => row.range);
+        const values = formattedResults.map(row => row.count);
         const total = values.reduce((acc, count) => acc + count, 0);
 
-        res.json({ labels, values, total });
+        res.json({labels, values, total});
     });
 });
 
@@ -53,17 +92,17 @@ app.get('/stats/messages', (req, res) => {
     db.query(query, (err, results) => {
         if (err) {
             console.error(err);
-            return res.status(500).json({ error: 'Database error' });
+            return res.status(500).json({error: 'Database error'});
         }
 
         const labels = results.map(row => row.date);
         const values = results.map(row => row.message_count);
         const total = values.reduce((acc, count) => acc + count, 0);
 
-        res.json({ labels, values, total });
+        res.json({labels, values, total});
     });
 });
 
-app.listen(process.env.PORT,() => {
+app.listen(process.env.PORT, () => {
     console.log(`Server running on http://localhost:${process.env.PORT}`);
 });
