@@ -103,6 +103,29 @@ app.get('/stats/messages', (req, res) => {
     });
 });
 
+app.get('/stats/cities', (req, res) => {
+    const query = `
+        SELECT cities.id, 
+               IF (cities.title_uk > '', cities.title_uk, cities.title_en) AS name,
+               cities.lat, 
+               cities.lon, 
+               COUNT(user_cities.user_id) as user_count
+        FROM cities
+        INNER JOIN user_cities ON cities.id = user_cities.city_id
+        GROUP BY cities.id, name, cities.lat, cities.lon
+        ORDER BY user_count DESC
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        res.json(results);
+    });
+});
+
 app.listen(process.env.PORT, () => {
     console.log(`Server running on http://localhost:${process.env.PORT}`);
 });
